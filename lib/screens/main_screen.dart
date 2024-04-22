@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:syncer/screens/client_screen.dart';
 import 'package:syncer/screens/server_screen.dart';
 import 'package:syncer/utils/navigation_utils.dart';
+import 'package:syncer/widgets/syncer_scaffold.dart';
 
 class MainScreen extends StatelessWidget {
   const MainScreen({super.key});
@@ -10,47 +11,37 @@ class MainScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Mode')),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Divider(height: 1),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        await NavigationUtils.pushNamed(
-                          context,
-                          routeName: ClientScreen.route,
-                        );
-                      },
-                      child: const Text('Client'),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        await NavigationUtils.pushNamed(
-                          context,
-                          routeName: ServerScreen.route,
-                        );
-                      },
-                      child: const Text('Server'),
-                    ),
-                  ),
-                ],
+    return SyncerScaffold(
+      title: 'Syncer - Pick Mode',
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () async {
+                  await NavigationUtils.pushNamed(
+                    context,
+                    routeName: ClientScreen.route,
+                  );
+                },
+                child: const Text('Client'),
               ),
             ),
-          ),
-        ],
-      ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () async {
+                  await NavigationUtils.pushNamed(
+                    context,
+                    routeName: ServerScreen.route,
+                  );
+                },
+                child: const Text('Server'),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
