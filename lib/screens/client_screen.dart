@@ -1,7 +1,6 @@
-import 'dart:io';
-
 import 'package:bonsoir/bonsoir.dart';
 import 'package:flutter/material.dart';
+import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'package:syncer/models/syncer_service.dart';
 import 'package:syncer/utils/constants.dart';
 import 'package:syncer/utils/utils.dart';
@@ -22,62 +21,19 @@ class _ClientScreenState extends State<ClientScreen> {
 
   final _services = <String, SyncerService>{};
 
-  Socket? _currentSocket;
+  io.Socket? _client;
 
-  Future<void> _connectToServer({
-    required SyncerService syncerService,
-  }) async {
-    try {
-      // TODO: fix, extract
+  void _clearClient() {
+    _client?.dispose();
 
-      final socket = await Socket.connect(syncerService.ip, syncerService.port);
-
-      socket.listen(
-        (List<int> data) {
-          // TODO: fix, handle messages
-          // socket.writeln('Hello from client!');
-          // await socket.flush();
-
-          // final serverResponse = String.fromCharCodes(data);
-          // print('from server: $serverResponse');
-        },
-        onDone: () {
-          setState(() {
-            _currentSocket = null;
-          });
-
-          socket.destroy();
-        },
-        onError: (e) {
-          setState(() {
-            _currentSocket = null;
-          });
-
-          socket.destroy();
-        },
-      );
-
-      setState(() {
-        _currentSocket = socket;
-      });
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _currentSocket = null;
-        });
-
-        await Utils.showAlertDialog(
-          context,
-          title: 'Error connecting to server',
-          content: e.toString(),
-        );
-      }
-    }
+    setState(() {
+      _client = null;
+    });
   }
 
   Widget _getConnectedServerCard() {
     return Card(
-      child: _currentSocket == null
+      child: _client == null
           ? const Padding(
               padding: EdgeInsets.all(16),
               child: Row(
@@ -130,13 +86,14 @@ class _ClientScreenState extends State<ClientScreen> {
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Text(
-                    'Available servers (${_services.length.toStringAsFixed(0)}):'),
+                  'Available servers (${_services.length.toStringAsFixed(0)}):',
+                ),
               ),
               ..._services.values.map((e) {
                 return SyncerServiceListTile(
                   syncerService: e,
-                  onTap: () async {
-                    await _connectToServer(syncerService: e);
+                  onTap: () {
+                    _initClient(syncerService: e);
                   },
                 );
               })
@@ -186,6 +143,54 @@ class _ClientScreenState extends State<ClientScreen> {
     await _discovery.start();
   }
 
+  void _initClient({
+    required SyncerService syncerService,
+  }) {
+    // TODO: fix, extract
+
+    _clearClient();
+
+    final client = io.io(
+      'http://${syncerService.ip}:${syncerService.port.toStringAsFixed(0)}',
+      io.OptionBuilder()
+          .disableReconnection()
+          .enableForceNewConnection()
+          .setExtraHeaders(
+            {
+              // TODO: fix, password
+              'password': '123',
+            },
+          )
+          .setTimeout(2000)
+          .setTransports(['websocket'])
+          .build(),
+    );
+
+    client.onConnect((_) {
+      setState(() {
+        _client = client;
+      });
+    });
+
+    client.onConnectError((e) async {
+      _clearClient();
+
+      await Utils.showAlertDialog(
+        context,
+        title: 'Error connecting to server',
+        content: e.toString(),
+      );
+    });
+
+    client.onDisconnect((e) {
+      _clearClient();
+    });
+
+    client.on('event', (data) {
+      // TODO: fix, handle messages
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -196,7 +201,7 @@ class _ClientScreenState extends State<ClientScreen> {
   @override
   void dispose() {
     _discovery.stop();
-    _currentSocket?.close();
+    _client?.dispose();
 
     super.dispose();
   }

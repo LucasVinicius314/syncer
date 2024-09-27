@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:bonsoir/bonsoir.dart';
 import 'package:flutter/material.dart';
+import 'package:socket_io/socket_io.dart' as io;
 import 'package:syncer/models/syncer_service.dart';
 import 'package:syncer/utils/constants.dart';
 import 'package:syncer/utils/utils.dart';
@@ -21,10 +22,11 @@ class ServerScreen extends StatefulWidget {
 class _ServerScreenState extends State<ServerScreen> {
   final _windowsNetworkAdapterInfo = WindowsNetworkAdapterInfo();
 
+  final _server = io.Server();
+
   final _clients = <Socket>[];
 
   BonsoirBroadcast? _broadcast;
-  ServerSocket? _serverSocket;
 
   Widget _getClientsCard() {
     return Card(
@@ -115,39 +117,16 @@ class _ServerScreenState extends State<ServerScreen> {
     await _broadcast?.start();
   }
 
-  Future<void> _initServerSocket() async {
+  Future<void> _initServer() async {
     // TODO: fix, extract
 
-    final serverSocket =
-        await ServerSocket.bind(InternetAddress.anyIPv4, Constants.port);
-
-    serverSocket.listen((client) {
-      client.listen((List<int> data) {
-        final message = String.fromCharCodes(data);
-        print('Message from client: $message');
-        client.write('Message received: $message');
-      }, onDone: () {
-        setState(() {
-          _clients.remove(client);
-        });
-
-        client.close();
-      }, onError: (e) {
-        setState(() {
-          _clients.remove(client);
-        });
-
-        client.close();
-      });
-
-      setState(() {
-        _clients.add(client);
+    _server.onconnection((client) {
+      client.on('msg', (data) {
+        // TODO: fix, handle messages
       });
     });
 
-    setState(() {
-      _serverSocket = serverSocket;
-    });
+    await _server.listen(Constants.port);
   }
 
   @override
@@ -155,13 +134,13 @@ class _ServerScreenState extends State<ServerScreen> {
     super.initState();
 
     _initBonsoir();
-    _initServerSocket();
+    _initServer();
   }
 
   @override
   void dispose() {
     _broadcast?.stop();
-    _serverSocket?.close();
+    _server.close();
 
     super.dispose();
   }

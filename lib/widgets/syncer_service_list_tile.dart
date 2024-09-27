@@ -18,7 +18,8 @@ class SyncerServiceListTile extends StatelessWidget {
       title: Text('${syncerService.hostname} - ${syncerService.os}'),
       subtitle: Text(syncerService.ip),
       trailing: Text(
-        DateFormat('yyyy-MM-dd – kk:mm:ss').format(syncerService.publishedAt),
+        DateFormat('yyyy-MM-dd – kk:mm:ss')
+            .format(syncerService.publishedAt.toLocal()),
       ),
       onTap: onTap,
     );
